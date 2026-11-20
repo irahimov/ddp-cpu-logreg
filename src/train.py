@@ -92,6 +92,7 @@ def main():
     else:
         print(f"[Rank {rank} Done] Finished cleanly on {hostname}", flush=True)
 
+    if rank == 0: time.sleep(1)
     dist.destroy_process_group()
 
 
