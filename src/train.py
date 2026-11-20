@@ -1,4 +1,6 @@
+import argparse
 import os
+import socket
 import time
 import yaml
 import torch
@@ -23,12 +25,19 @@ def evaluate(model, test_ds, loss_fn):
 
 
 def main():
-    with open("configs/config.yaml", "r") as f:
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--config", type=str, default="configs/config.yaml")
+    args = parser.parse_args()
+
+    with open(args.config, "r") as f:
         cfg = yaml.safe_load(f)
 
     dist.init_process_group(backend="gloo")
     rank = dist.get_rank()
     world_size = dist.get_world_size()
+    hostname = socket.gethostname()
+
+    print(f"rank={rank} world_size={world_size} host={hostname}", flush=True)
 
     torch.manual_seed(cfg["seed"])
     torch.set_num_threads(1)
@@ -50,7 +59,6 @@ def main():
     if rank == 0:
         os.makedirs(os.path.dirname(cfg["checkpoint_path"]), exist_ok=True)
         os.makedirs(os.path.dirname(cfg["log_path"]), exist_ok=True)
-        print(f"[DDP Start] rank={rank}/{world_size} | train_samples={len(train_ds)}", flush=True)
 
     start_time = time.time()
     for epoch in range(1, cfg["epochs"] + 1):
@@ -76,10 +84,13 @@ def main():
             with open(cfg["log_path"], "a") as lf:
                 lf.write(log_line + "\n")
 
+    dist.barrier()
     if rank == 0:
         elapsed = time.time() - start_time
         torch.save(model.module.state_dict(), cfg["checkpoint_path"])
         print(f"[DDP Done] Elapsed: {elapsed:.3f}s | Saved: {cfg['checkpoint_path']}", flush=True)
+    else:
+        print(f"[Rank {rank} Done] Finished cleanly on {hostname}", flush=True)
 
     dist.destroy_process_group()
 
