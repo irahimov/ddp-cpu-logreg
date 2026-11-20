@@ -1,0 +1,46 @@
+rank=0 world_size=2 host=vm1
+[rank0]: Traceback (most recent call last):
+[rank0]:   File "/home/ddpuser/ddp-cpu-logreg/src/train.py", line 143, in <module>
+[rank0]:     main()
+[rank0]:   File "/home/ddpuser/ddp-cpu-logreg/src/train.py", line 66, in main
+[rank0]:     model = DDP(base_model)
+[rank0]:             ^^^^^^^^^^^^^^^
+[rank0]:   File "/home/ddpuser/miniconda3/envs/ddp/lib/python3.11/site-packages/torch/nn/parallel/distributed.py", line 1076, in __init__
+[rank0]:     _verify_param_shape_across_processes(self.process_group, parameters)
+[rank0]:   File "/home/ddpuser/miniconda3/envs/ddp/lib/python3.11/site-packages/torch/distributed/utils.py", line 299, in _verify_param_shape_across_processes
+[rank0]:     return dist._verify_params_across_processes(process_group, tensors, logger)
+[rank0]:            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[rank0]: RuntimeError: [/__w/pytorch/pytorch/third_party/gloo/gloo/transport/tcp/pair.cc:561] Connection closed by peer [192.168.56.102]:6299. This is typically caused by a remote worker crashing. Check the logs of the remote worker before reporting an error. GLHF! 🏖️
+E1120 16:20:58.082000 3643 site-packages/torch/distributed/elastic/multiprocessing/api.py:1002] failed (exitcode: 1) local_rank: 0 (pid: 3647) of binary: /home/ddpuser/miniconda3/envs/ddp/bin/python3.11
+Traceback (most recent call last):
+  File "/home/ddpuser/miniconda3/envs/ddp/bin/torchrun", line 6, in <module>
+    sys.exit(main())
+             ^^^^^^
+  File "/home/ddpuser/miniconda3/envs/ddp/lib/python3.11/site-packages/torch/distributed/elastic/multiprocessing/errors/__init__.py", line 384, in wrapper
+    result = f(*args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^
+  File "/home/ddpuser/miniconda3/envs/ddp/lib/python3.11/site-packages/torch/distributed/run.py", line 1138, in main
+    run(args)
+  File "/home/ddpuser/miniconda3/envs/ddp/lib/python3.11/site-packages/torch/distributed/run.py", line 1129, in run
+    elastic_launch(
+  File "/home/ddpuser/miniconda3/envs/ddp/lib/python3.11/site-packages/torch/distributed/launcher/api.py", line 197, in __call__
+    return launch_agent(
+           ^^^^^^^^^^^^^
+  File "/home/ddpuser/miniconda3/envs/ddp/lib/python3.11/site-packages/torch/distributed/launcher/api.py", line 386, in launch_agent
+    raise ChildFailedError(
+torch.distributed.elastic.multiprocessing.errors.ChildFailedError: 
+============================================================
+src/train.py FAILED
+------------------------------------------------------------
+Failures:
+  <NO_OTHER_FAILURES>
+------------------------------------------------------------
+Root Cause (first observed failure):
+[0]:
+  time      : 2026-11-20_16:20:58
+  host      : vm1
+  rank      : 0 (local_rank: 0)
+  exitcode  : 1 (pid: 3647) 
+  error_file: <N/A>
+  traceback : To enable traceback see: https://pytorch.org/docs/stable/elastic/errors.html
+============================================================

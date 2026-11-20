@@ -1,0 +1,13 @@
+[W1120 14:59:50.026376164 socket.cpp:207] [c10d] The hostname of the client socket cannot be retrieved. err=-3
+rank=0 world_size=2 host=vm1
+Epoch 01/10 | Train Loss: 0.4284 | Test Loss: 0.2768 | Test Acc: 95.61%
+Epoch 02/10 | Train Loss: 0.2571 | Test Loss: 0.2015 | Test Acc: 96.49%
+Epoch 03/10 | Train Loss: 0.2021 | Test Loss: 0.1676 | Test Acc: 97.37%
+Epoch 04/10 | Train Loss: 0.1604 | Test Loss: 0.1498 | Test Acc: 97.37%
+Epoch 05/10 | Train Loss: 0.1510 | Test Loss: 0.1384 | Test Acc: 97.37%
+Epoch 06/10 | Train Loss: 0.1404 | Test Loss: 0.1294 | Test Acc: 96.49%
+Epoch 07/10 | Train Loss: 0.1161 | Test Loss: 0.1229 | Test Acc: 96.49%
+Epoch 08/10 | Train Loss: 0.1424 | Test Loss: 0.1185 | Test Acc: 97.37%
+Epoch 09/10 | Train Loss: 0.1430 | Test Loss: 0.1144 | Test Acc: 97.37%
+Epoch 10/10 | Train Loss: 0.1308 | Test Loss: 0.1104 | Test Acc: 97.37%
+[DDP Done] Elapsed: 215.545s | Saved: results/checkpoints/logreg_ddp.pt
