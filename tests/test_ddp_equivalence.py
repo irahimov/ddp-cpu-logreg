@@ -45,6 +45,7 @@ def main():
             loss.backward()
             opt.step()
 
+    import os; os.makedirs("results", exist_ok=True)
     ref_path = "results/single_proc_weights.pt"
     if rank == 0:
         w = model.module.weight.detach().clone()
