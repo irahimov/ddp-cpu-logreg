@@ -1,4 +1,5 @@
 import argparse
+import csv
 import os
 import socket
 import time
@@ -27,6 +28,8 @@ def evaluate(model, test_ds, loss_fn):
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--config", type=str, default="configs/config.yaml")
+    parser.add_argument("--resume", action="store_true", help="Resume from latest checkpoint")
+    parser.add_argument("--metrics-out", type=str, default=None, help="CSV path for per-epoch timing")
     args = parser.parse_args()
 
     with open(args.config, "r") as f:
@@ -44,8 +47,23 @@ def main():
 
     train_ds, test_ds, in_features = load_datasets(cfg["data_path"], seed=cfg["seed"])
     base_model, loss_fn = build_model(in_features)
+    opt = torch.optim.SGD(base_model.parameters(), lr=cfg["lr"])
+
+    start_epoch = 1
+    ckpt_path = cfg["checkpoint_path"]
+
+    if args.resume and os.path.exists(ckpt_path):
+        ckpt = torch.load(ckpt_path, map_location="cpu")
+        if isinstance(ckpt, dict) and "model_state_dict" in ckpt:
+            base_model.load_state_dict(ckpt["model_state_dict"])
+            opt.load_state_dict(ckpt["optimizer_state_dict"])
+            start_epoch = ckpt["epoch"] + 1
+        else:
+            base_model.load_state_dict(ckpt)
+        if rank == 0:
+            print(f"[Resume] Loaded checkpoint from {ckpt_path}, continuing from epoch {start_epoch}", flush=True)
+
     model = DDP(base_model)
-    opt = torch.optim.SGD(model.parameters(), lr=cfg["lr"])
 
     sampler = DistributedSampler(
         train_ds,
@@ -57,11 +75,16 @@ def main():
     loader = DataLoader(train_ds, batch_size=cfg["batch_size"], sampler=sampler)
 
     if rank == 0:
-        os.makedirs(os.path.dirname(cfg["checkpoint_path"]), exist_ok=True)
+        os.makedirs(os.path.dirname(ckpt_path), exist_ok=True)
         os.makedirs(os.path.dirname(cfg["log_path"]), exist_ok=True)
+        if args.metrics_out:
+            os.makedirs(os.path.dirname(args.metrics_out), exist_ok=True)
 
-    start_time = time.time()
-    for epoch in range(1, cfg["epochs"] + 1):
+    epoch_records = []
+    total_t0 = time.perf_counter()
+
+    for epoch in range(start_epoch, cfg["epochs"] + 1):
+        ep_t0 = time.perf_counter()
         model.train()
         sampler.set_epoch(epoch)
         epoch_loss = 0.0
@@ -72,28 +95,47 @@ def main():
             opt.step()
             epoch_loss += loss.item()
 
+        dist.barrier()
+        ep_elapsed = time.perf_counter() - ep_t0
+
         if rank == 0:
             test_loss, test_acc = evaluate(model.module, test_ds, loss_fn)
+            train_loss = epoch_loss / len(loader)
             log_line = (
                 f"Epoch {epoch:02d}/{cfg['epochs']:02d} | "
-                f"Train Loss: {epoch_loss / len(loader):.4f} | "
+                f"Train Loss: {train_loss:.4f} | "
                 f"Test Loss: {test_loss:.4f} | "
-                f"Test Acc: {test_acc * 100:.2f}%"
+                f"Test Acc: {test_acc * 100:.2f}% | "
+                f"Time: {ep_elapsed * 1000:.2f} ms"
             )
             print(log_line, flush=True)
             with open(cfg["log_path"], "a") as lf:
                 lf.write(log_line + "\n")
 
+            torch.save(
+                {
+                    "epoch": epoch,
+                    "model_state_dict": model.module.state_dict(),
+                    "optimizer_state_dict": opt.state_dict(),
+                },
+                ckpt_path,
+            )
+            epoch_records.append((epoch, train_loss, test_loss, test_acc, ep_elapsed))
+
     dist.barrier()
     if rank == 0:
-        elapsed = time.time() - start_time
-        torch.save(model.module.state_dict(), cfg["checkpoint_path"])
-        print(f"[DDP Done] Elapsed: {elapsed:.3f}s | Saved: {cfg['checkpoint_path']}", flush=True)
+        total_elapsed = time.perf_counter() - total_t0
+        if args.metrics_out and epoch_records:
+            with open(args.metrics_out, "w", newline="") as cf:
+                writer = csv.writer(cf)
+                writer.writerow(["epoch", "train_loss", "test_loss", "test_acc", "epoch_time_sec"])
+                writer.writerows(epoch_records)
+        print(f"[DDP Done] Total: {total_elapsed:.4f}s | Saved: {ckpt_path}", flush=True)
     else:
         print(f"[Rank {rank} Done] Finished cleanly on {hostname}", flush=True)
 
-    if rank == 0: time.sleep(1)
-    if rank == 0: time.sleep(1)
+    if rank == 0:
+        time.sleep(1)
     dist.destroy_process_group()
 
 
