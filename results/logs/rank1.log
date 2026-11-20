@@ -1,0 +1,2 @@
+rank=1 world_size=2 host=vm2
+[Rank 1 Done] Finished cleanly on vm2
