@@ -1,0 +1,8 @@
+data_path: "data/data.csv"
+epochs: 10
+lr: 0.1
+batch_size: 32
+seed: 42
+master_port: 29500
+checkpoint_path: "results/checkpoints/logreg_ddp.pt"
+log_path: "results/logs/train.log"
